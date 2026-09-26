@@ -14,7 +14,7 @@ help: ## List commands
 .PHONY: install
 install: ## Install dependencies and git hooks
 	$(UV) sync --all-groups
-	$(UV) run pre-commit install
+	$(UV) run pre-commit install --hook-type pre-commit --hook-type pre-push
 
 # ------------------------------------------------------------------ quality
 .PHONY: fmt
@@ -40,8 +40,12 @@ cov: ## Tests with branch coverage; the domain must be at 100%
 	$(UV) run pytest -q --cov --cov-report=term --cov-report=xml
 	$(UV) run coverage report --include='*/homebrain/domain/*' --fail-under=100
 
+.PHONY: scan-history
+scan-history: ## Scan the full git history for secrets, account ids and emails
+	bash scripts/scan-history.sh
+
 .PHONY: check
-check: lint typecheck cov ## Everything CI runs
+check: lint typecheck cov scan-history ## Everything CI runs
 
 # ------------------------------------------------------------------ run
 .PHONY: run

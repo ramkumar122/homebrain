@@ -16,6 +16,13 @@ repos:
 
   - repo: local
     hooks:
+      - id: scan-history
+        name: scan full history for secrets, account ids, emails
+        entry: bash scripts/scan-history.sh
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
       - id: forbid-tfstate
         name: forbid terraform state files
         entry: "Terraform state must never be committed"

@@ -18,6 +18,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history for the secret scan
 
       - uses: astral-sh/setup-uv@v6
         with:
