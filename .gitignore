@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Secrets and local state: never commit
+.env
+.env.*
+!.env.example
+.local/
+*.pem
+*.key
+secrets/
+
+# Terraform / OpenTofu: never commit state
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+crash.*.log
+*.tfvars
+!*.tfvars.example
+.terraform.tfstate.lock.info
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Node (Local Inspector, alexa-ai scaffold)
+node_modules/
+
+# Stand-in recordings of Bedrock responses (rehearsal output; commit deliberately if needed)
+standin-cassettes/*.tmp.json
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
