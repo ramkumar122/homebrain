@@ -917,7 +917,8 @@ Never cut: the state machine, real ingestion, the stand-in, the video.
 - **Q1. Passkey domain.** Cognito passkeys may need a custom domain for the WebAuthn relying party. I'll confirm on Mon 12 Oct at the latest. Not needed from you yet.
 - **Q2. A domain name, needed by Fri 9 Oct.** An ALB can only serve HTTPS with an ACM certificate for a domain you own, and OAuth redirects plus Alexa+ need HTTPS.
   - Options: (a) register a cheap domain in Route 53 (about $3–15 a year; it can take up to a day), or (b) put CloudFront in front of the ALB and use its default `*.cloudfront.net` certificate. Option (b) needs SSE keep-alive pings, because CloudFront cuts idle connections.
-  - **I recommend (a).** Tell me which.
+  - **Decided: a custom domain, not CloudFront.** You'll confirm by Fri 9 Oct whether you already own a domain. If you do, we use a subdomain with a Route 53 hosted zone and an ACM certificate. **Nothing gets registered without asking you first.**
+  - Terraform takes `domain_name` and `create_hosted_zone` as **variables**. No domain, account id or email ever appears in committed config. Real values live in an untracked `*.tfvars` file; a `*.tfvars.example` is committed.
 
 ---
 
