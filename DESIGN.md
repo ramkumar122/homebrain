@@ -140,11 +140,11 @@ stateDiagram-v2
 
   NEEDS_SERVICE --> PROVIDERS_PROPOSED: PROVIDERS_FOUND [n ≥ 1]
   NEEDS_SERVICE --> NEEDS_SERVICE: PROVIDERS_FOUND [n = 0]
-  PROVIDERS_PROPOSED --> PROVIDERS_PROPOSED: PROVIDERS_FOUND (refresh)
+  PROVIDERS_PROPOSED --> PROVIDERS_PROPOSED: PROVIDERS_FOUND (refresh) [n ≥ 1]
+  PROVIDERS_PROPOSED --> NEEDS_SERVICE: PROVIDERS_FOUND (refresh) [n = 0]
 
   PROVIDERS_PROPOSED --> BOOKED: BOOKING_CONFIRMED [slot open, valid grant]
   PROVIDERS_PROPOSED --> PENDING_VERIFICATION: BOOKING_CONFIRMED [slot open, no grant]
-  PROVIDERS_PROPOSED --> PROVIDERS_PROPOSED: BOOKING_CONFIRMED [slot gone]
 
   PENDING_VERIFICATION --> PENDING_VERIFICATION: BOOKING_CONFIRMED (different slot → new challenge)
   PENDING_VERIFICATION --> BOOKED: VERIFIED [slot still held]
@@ -163,6 +163,8 @@ stateDiagram-v2
   RESOLVED --> [*]
   CANCELLED --> [*]
 ```
+
+**Rejections are not transitions.** A confirmation for a taken slot returns `SLOT_UNAVAILABLE`, an unknown offer returns `UNKNOWN_OFFER`, a wrong or stale step id returns `STEP_MISMATCH`, and a verification for a different booking returns `CHALLENGE_MISMATCH`. Nothing is written in any of these cases. Repeating an outcome that's already recorded, or re-confirming the same offer, returns `duplicate: true`.
 
 **Confirmation is stateless.** `book_service` without `confirmed: true` returns a summary and changes nothing. Only an explicit yes produces `BOOKING_CONFIRMED`. That's why there is no `AWAITING_CONFIRMATION` state.
 
@@ -208,8 +210,10 @@ Any `(state, event)` pair not in the diagram is rejected with `INVALID_TRANSITIO
 | Transition | Effects |
 |---|---|
 | `→ PENDING_VERIFICATION` | `CreateCheckoutSession` (holds the slot), `IssueChallenge(ttl 5 min)`, `DeliverChallenge(email)` |
-| `→ BOOKED` | `CompleteCheckoutSession`, `ScheduleReminder(slot.start − 1 day, ALL)`, `ScheduleReminder(slot.end + 2 h, "Did the technician fix it?")`, `EmitNotice(ALL)`, `RevokeChallenge` |
-| `PENDING_VERIFICATION → PROVIDERS_PROPOSED` / `→ CANCELLED` from PENDING | `CancelCheckoutSession`, `RevokeChallenge` |
+| `→ BOOKED` | `CompleteCheckoutSession`, `ScheduleReminder(slot.start − 1 day, ALL)` (only if that time is still in the future), `ScheduleReminder(slot.end + 2 h, "Did the technician fix it?")`, `EmitNotice(ALL)` |
+| switching slot while `PENDING_VERIFICATION` | `CancelCheckoutSession(old)`, `RevokeChallenge(old)`, then as a fresh confirmation |
+| `PENDING_VERIFICATION → PROVIDERS_PROPOSED` (failed, expired or hold lost) | `CancelCheckoutSession` (the challenge is already spent) |
+| `PENDING_VERIFICATION → CANCELLED` | `CancelCheckoutSession`, `RevokeChallenge` |
 | `BOOKED → CANCELLED` | `CancelCheckoutSession`, `CancelReminders` |
 | any | `AppendCaseEvent`, `BumpVersion` |
 
@@ -269,7 +273,9 @@ a. explicit id  ← request._meta[HB_PERSON_META_KEY], if configured and present
 b. speaker_hint ← tool argument
                    normalise (casefold, strip "this is"/"it's"/"I'm"),
                    match display_name, then aliases, then difflib ratio ≥ 0.85
-                   1 match → "speaker_hint", medium   >1 → PERSON_AMBIGUOUS   0 → "guest"
+                   exact name or alias: 1 match → "speaker_hint", medium   >1 → PERSON_AMBIGUOUS
+                   else fuzzy:          1 match → "speaker_hint", low      >1 → PERSON_AMBIGUOUS
+                   no match → "guest" (name_heard kept)   filler only ("this is") → no hint
 c. no hint      → household.default_person_policy
                    "owner" (default) → account owner, "account_owner_assumed", low
                    "guest"           → guest
