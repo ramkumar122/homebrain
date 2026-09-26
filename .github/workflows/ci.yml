@@ -37,6 +37,9 @@ jobs:
       - name: Tests + coverage (domain must be 100% branch)
         run: make cov
 
+      - name: Scan full history for secrets, account ids, emails
+        run: make scan-history
+
       - name: No Terraform state or secrets tracked
         run: |
           if git ls-files | grep -E '\.tfstate(\..*)?$|\.tfplan$|(^|/)\.env$'; then
