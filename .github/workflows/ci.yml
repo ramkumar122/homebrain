@@ -1,0 +1,55 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install
+        run: uv sync --locked --all-groups
+
+      - name: Lint
+        run: make lint
+
+      - name: Type-check (mypy --strict)
+        run: make typecheck
+
+      - name: Tests + coverage (domain must be 100% branch)
+        run: make cov
+
+      - name: No Terraform state or secrets tracked
+        run: |
+          if git ls-files | grep -E '\.tfstate(\..*)?$|\.tfplan$|(^|/)\.env$'; then
+            echo "::error::State or secret files are tracked"; exit 1
+          fi
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t homebrain:ci .
+      - name: Smoke test /healthz
+        run: |
+          docker run -d --name hb -p 8080:8080 homebrain:ci
+          for i in $(seq 1 20); do curl -fsS localhost:8080/healthz && exit 0; sleep 1; done
+          docker logs hb; exit 1
