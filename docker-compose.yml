@@ -1,0 +1,24 @@
+# Local stack. Nothing here talks to AWS.
+# The Alexa+ stand-in joins in week 1 (it is the only local component that calls AWS: Bedrock).
+services:
+  homebrain:
+    build: .
+    ports: ["8080:8080"]
+    environment:
+      HB_ENV: local
+      HB_PUBLIC_BASE_URL: http://localhost:8080
+      AUTH_401_STYLE: spec
+      HB_DYNAMODB_TABLE: homebrain
+      HB_DYNAMODB_ENDPOINT_URL: http://dynamodb:8000
+      # DynamoDB Local accepts any credentials; these are not secrets.
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+      AWS_REGION: us-east-1
+    depends_on:
+      dynamodb:
+        condition: service_started
+
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+    ports: ["8000:8000"]
